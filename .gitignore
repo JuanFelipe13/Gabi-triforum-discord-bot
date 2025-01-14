@@ -401,3 +401,4 @@ FodyWeavers.xsd
 /.venv
 /build
 /vosk-model-small-es
+playlists.json

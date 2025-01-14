@@ -5,15 +5,9 @@ from pathlib import Path
 import json
 import logging
 from functools import lru_cache
-import asyncio
 from typing import Optional, Dict
 from dotenv import load_dotenv
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler()]
-)
 logger = logging.getLogger(__name__)
 
 CONFIG_FILE = Path('config.json')
@@ -26,7 +20,7 @@ class MusicBot(commands.Bot):
         
         intents = discord.Intents.default()
         intents.message_content = True
-        intents.voice_states = True 
+        intents.voice_states = True
         
         super().__init__(
             command_prefix=self._get_prefix,
@@ -60,9 +54,7 @@ class MusicBot(commands.Bot):
             ).strip()
             
             if not self.discord_token:
-                logger.error("No se encontró el token de Discord en ninguna ubicación")
-                logger.error("Por favor, configura el token en .env o config.json")
-                raise ValueError("Token de Discord no encontrado. Revisa .env o config.json")
+                raise ValueError("Token de Discord no encontrado")
                 
         except Exception as e:
             logger.error(f"Error cargando configuración: {str(e)}")
@@ -98,7 +90,7 @@ class MusicBot(commands.Bot):
                 
             members = [m for m in before.channel.members if not m.bot]
             if not members:
-                from src.commands.music import players
+                from ..core.state import players
                 if voice_client.guild.id in players:
                     player = players[voice_client.guild.id]
                     player.queue.clear()
@@ -106,4 +98,3 @@ class MusicBot(commands.Bot):
                     player.current = None
                 
                 await voice_client.disconnect()
-                logger.info(f'Bot desconectado del canal {before.channel} por inactividad')
