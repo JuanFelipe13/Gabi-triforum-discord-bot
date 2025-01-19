@@ -402,3 +402,5 @@ FodyWeavers.xsd
 /build
 /vosk-model-small-es
 playlists.json
+.env
+.env
