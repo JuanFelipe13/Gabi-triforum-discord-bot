@@ -119,3 +119,110 @@ class MusicCommands(commands.Cog):
     @commands.command()
     async def resume(self, ctx):
         await self.play(ctx)
+
+    @commands.command()
+    async def remove(self, ctx, index: int):
+        player = get_player(ctx, players)
+        
+        if not player.queue:
+            await ctx.send("❌ La cola está vacía")
+            return
+        
+        try:
+            index = index - 1 
+            if 0 <= index < len(player.queue):
+                removed_song = player.queue.pop(index)
+                await ctx.send(f"🗑️ Eliminada: {removed_song['title']}")
+            else:
+                await ctx.send("❌ Índice no válido")
+        except ValueError:
+            await ctx.send("❌ Por favor, proporciona un número válido")
+
+    @commands.command()
+    async def next(self, ctx, index: int):
+        player = get_player(ctx, players)
+        
+        if not player.queue:
+            await ctx.send("❌ La cola está vacía")
+            return
+        
+        try:
+            index = index - 1 
+            if 0 <= index < len(player.queue):
+
+                queue_list = list(player.queue)
+                song = queue_list.pop(index)
+                player.queue.clear()
+                player.queue.appendleft(song)
+                player.queue.extend(queue_list)
+                await ctx.send(f"⏭️ Movida a siguiente: {song['title']}")
+            else:
+                await ctx.send("❌ Índice no válido")
+        except ValueError:
+            await ctx.send("❌ Por favor, proporciona un número válido")
+
+    @commands.command()
+    async def shuffle(self, ctx):
+        player = get_player(ctx, players)
+        
+        if len(player.queue) < 2:
+            await ctx.send("❌ No hay suficientes canciones en la cola para mezclar")
+            return
+
+        queue_list = list(player.queue)
+        from random import shuffle
+        shuffle(queue_list)
+        
+        player.queue.clear()
+        player.queue.extend(queue_list)
+        
+        await ctx.send("🔀 Cola mezclada")
+
+    @commands.command()
+    async def playnow(self, ctx, *, query=None):
+        if query is None:
+            await ctx.send("❌ Por favor, proporciona una canción para reproducir")
+            return
+        
+        player = get_player(ctx, players)
+        
+        try:
+            if not ctx.voice_client:
+                if not ctx.author.voice:
+                    await ctx.send("¡Necesitas estar en un canal de voz!")
+                    return
+                await ctx.author.voice.channel.connect()
+            
+            async with ctx.typing():
+                current_queue = player.queue.copy()
+                player.queue.clear()
+                
+                if not URL_REGEX.match(query):
+                    await handle_search(ctx, query, player)
+                else:
+                    await handle_url(ctx, query, player)
+                
+                if player.queue:
+                    if ctx.voice_client and (ctx.voice_client.is_playing() or ctx.voice_client.is_paused()):
+                        ctx.voice_client.stop()
+                    
+                    player.queue.extend(current_queue)
+                else:
+                    player.queue.extend(current_queue)
+                    await ctx.send("❌ No se pudo encontrar la canción")
+                
+        except Exception as e:
+            logger.exception(f"Error reproduciendo audio: {e}")
+            await ctx.send("❌ Error reproduciendo el audio")
+
+    @commands.command()
+    async def clean(self, ctx):
+        player = get_player(ctx, players)
+
+        player.queue.clear()
+        
+        if ctx.voice_client and (ctx.voice_client.is_playing() or ctx.voice_client.is_paused()):
+            ctx.voice_client.stop()
+            await ctx.send("🧹 Cola limpiada y canción actual saltada")
+        else:
+            await ctx.send("🧹 Cola limpiada")

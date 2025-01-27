@@ -97,9 +97,9 @@ class MusicPlayer:
 
     @staticmethod
     def format_duration(duration: int) -> str:
-        hours = duration // 3600
-        minutes = (duration % 3600) // 60
-        seconds = duration % 60
+        hours = int(duration // 3600)
+        minutes = int((duration % 3600) // 60)
+        seconds = int(duration % 60)
         
         if hours > 0:
             return f"{hours}:{minutes:02d}:{seconds:02d}"

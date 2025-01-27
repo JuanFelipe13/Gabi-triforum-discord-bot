@@ -102,21 +102,15 @@ async def handle_url(ctx, url, player):
                     await ctx.send("❌ No se encontraron videos en la playlist")
                     return
 
-                for i in range(0, len(entries), 3):
-                    chunk = entries[i:i+3]
-                    tasks = []
-                    for entry in chunk:
-                        if not entry:
-                            continue
-                        song_info = {
-                            'webpage_url': entry.get('url') or entry.get('webpage_url'),
-                            'title': entry.get('title', 'No disponible'),
-                            'duration': entry.get('duration', 0)
-                        }
-                        tasks.append(player.queue.append(song_info))
-                    
-                    if tasks:
-                        await asyncio.gather(*tasks)
+                for entry in entries:
+                    if not entry:
+                        continue
+                    song_info = {
+                        'webpage_url': entry.get('url') or entry.get('webpage_url'),
+                        'title': entry.get('title', 'No disponible'),
+                        'duration': entry.get('duration', 0)
+                    }
+                    player.queue.append(song_info)
 
             else:
                 song_info = {
