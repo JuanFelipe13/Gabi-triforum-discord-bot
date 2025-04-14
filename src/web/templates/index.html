@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TriForum Bot - Panel de Control</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background-color: #7289DA;
+            color: white;
+            padding: 20px 0;
+            text-align: center;
+        }
+        nav {
+            background-color: #5b6eae;
+            padding: 10px 0;
+            text-align: center;
+        }
+        nav a {
+            color: white;
+            margin: 0 15px;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        nav a:hover {
+            text-decoration: underline;
+        }
+        h1 {
+            margin: 0;
+        }
+        .status-card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        .status-badge.online {
+            background-color: #43B581;
+            color: white;
+        }
+        .status-badge.offline {
+            background-color: #F04747;
+            color: white;
+        }
+        .card-title {
+            margin-top: 0;
+            color: #7289DA;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .search-box {
+            margin-bottom: 20px;
+        }
+        .search-box input {
+            width: 70%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        .search-box button {
+            padding: 10px 20px;
+            background-color: #7289DA;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        .results {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .result-card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .result-card img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+        }
+        .result-info {
+            padding: 15px;
+        }
+        .result-title {
+            margin-top: 0;
+            font-size: 1.1rem;
+        }
+        .result-channel {
+            color: #777;
+            font-size: 0.9rem;
+        }
+        .result-duration {
+            color: #777;
+            font-size: 0.8rem;
+        }
+        .result-actions {
+            display: flex;
+            padding: 10px 15px;
+            border-top: 1px solid #eee;
+            align-items: center;
+        }
+        .add-to-playlist {
+            background-color: #43B581;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        .playlist-select {
+            flex-grow: 1;
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .playlist-section {
+            margin-top: 40px;
+        }
+        .playlist {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .playlist-songs {
+            list-style-type: none;
+            padding: 0;
+        }
+        .playlist-song {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .playlist-song:last-child {
+            border-bottom: none;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: #777;
+        }
+        .api-section {
+            margin-top: 40px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .api-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .api-card {
+            flex: 1;
+            min-width: 250px;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: rgba(114, 137, 218, 0.1);
+        }
+        .api-title {
+            color: #7289DA;
+            margin-top: 0;
+            font-size: 1.2rem;
+        }
+        #notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background-color: rgba(67, 181, 129, 0.9);
+            color: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            display: none;
+            z-index: 1000;
+        }
+        #notification.error {
+            background-color: rgba(240, 71, 71, 0.9);
+        }
+        .create-playlist-form {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .create-playlist-form input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .create-playlist-form button {
+            padding: 10px 20px;
+            background-color: #7289DA;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>TriForum Bot - Panel de Control</h1>
+    </header>
+    
+    <nav>
+        <a href="/">Inicio</a>
+        <a href="/weather">Clima</a>
+    </nav>
+
+    <div id="notification"></div>
+
+    <div class="container">
+        <div class="status-card">
+            <h2 class="card-title">Estado del Bot</h2>
+            <div id="status-info">
+                <p>Cargando...</p>
+            </div>
+        </div>
+
+        <div class="status-card">
+            <h2 class="card-title">Búsqueda de Música</h2>
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="Buscar canciones...">
+                <button id="search-button">Buscar</button>
+            </div>
+            <div id="search-results" class="results"></div>
+        </div>
+
+        <div class="playlist-section">
+            <h2 class="card-title">Listas de Reproducción</h2>
+            <div class="create-playlist-form">
+                <input type="text" id="new-playlist-name" placeholder="Nombre de nueva lista...">
+                <button id="create-playlist-button">Crear Lista</button>
+            </div>
+            <div id="playlists-container"></div>
+        </div>
+        
+        <div class="api-section">
+            <h2 class="card-title">APIs Integradas</h2>
+            <p>Este proyecto integra múltiples APIs para ofrecer una experiencia completa:</p>
+            
+            <div class="api-list">
+                <div class="api-card">
+                    <h3 class="api-title">Discord API</h3>
+                    <p>Utilizada para la interacción con servidores de Discord, gestión de mensajes y reproducción de audio en canales de voz.</p>
+                </div>
+                
+                <div class="api-card">
+                    <h3 class="api-title">YouTube API</h3>
+                    <p>Permite buscar y reproducir música y contenido multimedia desde YouTube mediante el uso de yt-dlp.</p>
+                </div>
+                
+                <div class="api-card">
+                    <h3 class="api-title">Twitter API</h3>
+                    <p>Integración para obtener y procesar contenido multimedia desde Twitter/X.com.</p>
+                </div>
+                
+                <div class="api-card">
+                    <h3 class="api-title">OpenWeatherMap API</h3>
+                    <p>Provee información meteorológica actualizada para cualquier ciudad del mundo.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>TriForum Bot - Integración de múltiples APIs (Discord, YouTube, Twitter, OpenWeatherMap)</p>
+        </div>
+    </div>
+
+    <script>
+        // Variable global para almacenar playlists
+        let playlists = {};
+
+        // Función para mostrar notificaciones
+        function showNotification(message, isError = false) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = isError ? 'error' : '';
+            notification.style.display = 'block';
+            
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+
+        // Función para formatear la duración
+        function formatDuration(seconds) {
+            if (!seconds) return 'Desconocido';
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+
+        // Cargar el estado del bot
+        async function loadStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                const statusEl = document.getElementById('status-info');
+                if (data.error) {
+                    statusEl.innerHTML = `<p>Error: ${data.error}</p>`;
+                    return;
+                }
+                
+                statusEl.innerHTML = `
+                    <p>Estado: <span class="status-badge ${data.connected ? 'online' : 'offline'}">${data.connected ? 'En línea' : 'Desconectado'}</span></p>
+                    <p>Servidores conectados: ${data.guilds}</p>
+                    <p>Tiempo activo: ${data.uptime}</p>
+                `;
+            } catch (error) {
+                console.error('Error cargando estado:', error);
+                document.getElementById('status-info').innerHTML = `<p>Error al cargar el estado: ${error.message}</p>`;
+            }
+        }
+
+        // Cargar listas de reproducción
+        async function loadPlaylists() {
+            try {
+                const response = await fetch('/api/playlists');
+                const data = await response.json();
+                
+                const container = document.getElementById('playlists-container');
+                container.innerHTML = '';
+                
+                if (data.error) {
+                    container.innerHTML = `<p>Error: ${data.error}</p>`;
+                    return;
+                }
+                
+                playlists = data; // Guardar las listas en variable global
+                
+                if (Object.keys(data).length === 0) {
+                    container.innerHTML = '<p>No hay listas de reproducción guardadas.</p>';
+                    return;
+                }
+                
+                for (const [name, songs] of Object.entries(data)) {
+                    const playlistEl = document.createElement('div');
+                    playlistEl.className = 'playlist';
+                    
+                    let songsHtml = '';
+                    if (songs && songs.length > 0) {
+                        songsHtml = '<ul class="playlist-songs">';
+                        songs.forEach(song => {
+                            songsHtml += `<li class="playlist-song">${song.title || 'Canción sin título'}</li>`;
+                        });
+                        songsHtml += '</ul>';
+                    } else {
+                        songsHtml = '<p>No hay canciones en esta lista.</p>';
+                    }
+                    
+                    playlistEl.innerHTML = `
+                        <h3>${name}</h3>
+                        <p>Canciones: ${songs ? songs.length : 0}</p>
+                        ${songsHtml}
+                    `;
+                    
+                    container.appendChild(playlistEl);
+                }
+                
+                // Actualizar selectores de listas en los resultados de búsqueda
+                updatePlaylistSelectors();
+            } catch (error) {
+                console.error('Error cargando playlists:', error);
+                document.getElementById('playlists-container').innerHTML = `<p>Error al cargar las listas: ${error.message}</p>`;
+            }
+        }
+
+        // Función para crear una nueva lista de reproducción
+        async function createPlaylist(name) {
+            if (!name.trim()) {
+                showNotification('Por favor, ingresa un nombre para la lista', true);
+                return;
+            }
+            
+            try {
+                // Cargar listas existentes y añadir una nueva
+                const updatedPlaylists = {...playlists};
+                updatedPlaylists[name] = [];
+                
+                // Guardar en el servidor
+                const response = await fetch('/api/playlist/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        playlist: name,
+                        song: null
+                    }),
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    showNotification(`Error: ${data.error}`, true);
+                    return;
+                }
+                
+                showNotification(`Lista "${name}" creada correctamente`);
+                loadPlaylists(); // Recargar las listas
+                
+            } catch (error) {
+                console.error('Error creando playlist:', error);
+                showNotification(`Error al crear la lista: ${error.message}`, true);
+            }
+        }
+
+        // Actualizar selectores de listas de reproducción
+        function updatePlaylistSelectors() {
+            const selectors = document.querySelectorAll('.playlist-select');
+            
+            selectors.forEach(selector => {
+                // Guardar la selección actual
+                const currentValue = selector.value;
+                
+                // Limpiar opciones existentes
+                selector.innerHTML = '<option value="">Seleccionar lista...</option>';
+                
+                // Añadir opciones de listas existentes
+                for (const name of Object.keys(playlists)) {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = name;
+                    selector.appendChild(option);
+                }
+                
+                // Restaurar selección si existe
+                if (currentValue && Object.keys(playlists).includes(currentValue)) {
+                    selector.value = currentValue;
+                }
+            });
+        }
+
+        // Añadir canción a lista de reproducción
+        async function addSongToPlaylist(song, playlistName) {
+            if (!playlistName) {
+                showNotification('Selecciona una lista de reproducción', true);
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/playlist/add', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        playlist: playlistName,
+                        song: song
+                    }),
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    showNotification(`Error: ${data.error}`, true);
+                    return;
+                }
+                
+                if (!data.success) {
+                    showNotification(data.message, true);
+                    return;
+                }
+                
+                showNotification(data.message);
+                loadPlaylists(); // Recargar las listas
+                
+            } catch (error) {
+                console.error('Error añadiendo canción:', error);
+                showNotification(`Error al añadir canción: ${error.message}`, true);
+            }
+        }
+
+        // Búsqueda de canciones
+        async function searchSongs(query) {
+            try {
+                const resultsEl = document.getElementById('search-results');
+                resultsEl.innerHTML = '<p>Buscando...</p>';
+                
+                const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    resultsEl.innerHTML = `<p>Error: ${data.error}</p>`;
+                    return;
+                }
+                
+                if (data.length === 0) {
+                    resultsEl.innerHTML = '<p>No se encontraron resultados.</p>';
+                    return;
+                }
+                
+                resultsEl.innerHTML = '';
+                data.forEach(song => {
+                    const cardEl = document.createElement('div');
+                    cardEl.className = 'result-card';
+                    
+                    cardEl.innerHTML = `
+                        <img src="${song.thumbnail || 'https://via.placeholder.com/300x180?text=Sin+imagen'}" alt="${song.title}">
+                        <div class="result-info">
+                            <h3 class="result-title">${song.title}</h3>
+                            <div class="result-channel">${song.channel}</div>
+                            <div class="result-duration">Duración: ${formatDuration(song.duration)}</div>
+                        </div>
+                        <div class="result-actions">
+                            <select class="playlist-select">
+                                <option value="">Seleccionar lista...</option>
+                            </select>
+                            <button class="add-to-playlist">Añadir</button>
+                        </div>
+                    `;
+                    
+                    // Añadir opciones de listas al selector
+                    const select = cardEl.querySelector('.playlist-select');
+                    for (const name of Object.keys(playlists)) {
+                        const option = document.createElement('option');
+                        option.value = name;
+                        option.textContent = name;
+                        select.appendChild(option);
+                    }
+                    
+                    // Añadir event listener al botón
+                    const addButton = cardEl.querySelector('.add-to-playlist');
+                    addButton.addEventListener('click', () => {
+                        const selectedPlaylist = select.value;
+                        if (selectedPlaylist) {
+                            addSongToPlaylist(song, selectedPlaylist);
+                        } else {
+                            showNotification('Selecciona una lista de reproducción', true);
+                        }
+                    });
+                    
+                    resultsEl.appendChild(cardEl);
+                });
+            } catch (error) {
+                console.error('Error en búsqueda:', error);
+                document.getElementById('search-results').innerHTML = `<p>Error en la búsqueda: ${error.message}</p>`;
+            }
+        }
+
+        // Event listeners
+        document.getElementById('search-button').addEventListener('click', () => {
+            const query = document.getElementById('search-input').value.trim();
+            if (query) {
+                searchSongs(query);
+            }
+        });
+
+        document.getElementById('search-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const query = document.getElementById('search-input').value.trim();
+                if (query) {
+                    searchSongs(query);
+                }
+            }
+        });
+        
+        document.getElementById('create-playlist-button').addEventListener('click', () => {
+            const name = document.getElementById('new-playlist-name').value.trim();
+            createPlaylist(name);
+        });
+        
+        document.getElementById('new-playlist-name').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const name = e.target.value.trim();
+                createPlaylist(name);
+            }
+        });
+
+        // Cargar datos iniciales
+        window.addEventListener('DOMContentLoaded', () => {
+            loadStatus();
+            loadPlaylists();
+        });
+    </script>
+</body>
+</html> 

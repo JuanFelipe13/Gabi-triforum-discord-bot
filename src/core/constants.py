@@ -30,7 +30,7 @@ YTDLP_OPTIONS = {
     'format': 'bestaudio/best',
     'quiet': True,
     'no_warnings': True,
-    'extract_flat': 'in_playlist',
+    'extract_flat': False,
     'skip_download': True,
     'force_generic_extractor': False,
     'ignoreerrors': True,
@@ -39,10 +39,20 @@ YTDLP_OPTIONS = {
     'logtostderr': False,
     'no_color': True,
     'source_address': '0.0.0.0',
-    'cachedir': False
+    'cachedir': False,
+    'socket_timeout': 10,
+    'retries': 3,
+    'fragment_retries': 3,
+    'http_chunk_size': 5242880,
+    'external_downloader_args': ['-timeout', '10'],
+    'youtube_include_dash_manifest': False,
+    'prefer_insecure': True,
+    'legacy_server_connect': True,
+    'live_from_start': True,
+    'live_buffer_size': 32768
 }
 
 FFMPEG_OPTIONS = {
-    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
-    'options': '-vn'
+    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -timeout 10000000 -nostdin -nostats',
+    'options': '-vn -b:a 160k -bufsize 320k -probesize 1M -analyzeduration 1M -ar 48000 -ac 2 -thread_queue_size 2048 -max_muxing_queue_size 2048'
 } 

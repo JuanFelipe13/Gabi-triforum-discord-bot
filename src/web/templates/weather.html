@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TriForum Bot - Clima</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background-color: #7289DA;
+            color: white;
+            padding: 20px 0;
+            text-align: center;
+        }
+        nav {
+            background-color: #5b6eae;
+            padding: 10px 0;
+            text-align: center;
+        }
+        nav a {
+            color: white;
+            margin: 0 15px;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        nav a:hover {
+            text-decoration: underline;
+        }
+        h1 {
+            margin: 0;
+        }
+        .weather-card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .card-title {
+            margin-top: 0;
+            color: #7289DA;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        .search-box {
+            margin-bottom: 20px;
+        }
+        .search-box input {
+            width: 70%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        .search-box button {
+            padding: 10px 20px;
+            background-color: #7289DA;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        .weather-result {
+            padding: 20px;
+            border-radius: 8px;
+            background-color: rgba(114, 137, 218, 0.1);
+            display: none;
+        }
+        .weather-result.visible {
+            display: block;
+        }
+        .weather-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .weather-icon {
+            width: 80px;
+            height: 80px;
+            margin-right: 20px;
+        }
+        .weather-main {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .weather-data {
+            margin-right: 30px;
+            margin-bottom: 15px;
+        }
+        .weather-label {
+            font-size: 0.9rem;
+            color: #777;
+            margin-bottom: 5px;
+        }
+        .weather-value {
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+        .error-message {
+            color: #F04747;
+            padding: 10px;
+            background-color: rgba(240, 71, 71, 0.1);
+            border-radius: 4px;
+            display: none;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>TriForum Bot - Clima</h1>
+    </header>
+    
+    <nav>
+        <a href="/">Inicio</a>
+        <a href="/weather">Clima</a>
+    </nav>
+
+    <div class="container">
+        <div class="weather-card">
+            <h2 class="card-title">Consulta el Clima</h2>
+            <div class="search-box">
+                <input type="text" id="city-input" placeholder="Ingresa una ciudad...">
+                <button id="search-button">Buscar</button>
+            </div>
+            <div id="error-message" class="error-message"></div>
+            <div id="weather-result" class="weather-result">
+                <div class="weather-header">
+                    <img id="weather-icon" class="weather-icon" src="" alt="Clima">
+                    <div>
+                        <h3 id="city-name">Ciudad</h3>
+                        <p id="weather-description">Descripción</p>
+                    </div>
+                </div>
+                <div class="weather-main">
+                    <div class="weather-data">
+                        <div class="weather-label">Temperatura</div>
+                        <div id="temperature" class="weather-value">--°C</div>
+                    </div>
+                    <div class="weather-data">
+                        <div class="weather-label">Sensación térmica</div>
+                        <div id="feels-like" class="weather-value">--°C</div>
+                    </div>
+                    <div class="weather-data">
+                        <div class="weather-label">Humedad</div>
+                        <div id="humidity" class="weather-value">--%</div>
+                    </div>
+                    <div class="weather-data">
+                        <div class="weather-label">Velocidad del viento</div>
+                        <div id="wind-speed" class="weather-value">-- m/s</div>
+                    </div>
+                    <div class="weather-data">
+                        <div class="weather-label">Presión</div>
+                        <div id="pressure" class="weather-value">-- hPa</div>
+                    </div>
+                    <div class="weather-data">
+                        <div class="weather-label">Nubosidad</div>
+                        <div id="clouds" class="weather-value">--%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>TriForum Bot - Integración de múltiples APIs (Discord, YouTube, Twitter, OpenWeatherMap)</p>
+        </div>
+    </div>
+
+    <script>
+        // Función para obtener los datos del clima
+        async function getWeatherData(city) {
+            try {
+                const response = await fetch(`/api/weather?city=${encodeURIComponent(city)}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayWeatherData(data);
+                } else {
+                    showError(data.error || 'Error al obtener los datos del clima');
+                }
+            } catch (error) {
+                console.error('Error obteniendo datos del clima:', error);
+                showError('Error de conexión al servicio de clima');
+            }
+        }
+
+        // Función para mostrar los datos del clima
+        function displayWeatherData(data) {
+            // Ocultar mensajes de error
+            document.getElementById('error-message').style.display = 'none';
+            
+            // Mostrar el contenedor de resultados
+            const resultContainer = document.getElementById('weather-result');
+            resultContainer.classList.add('visible');
+            
+            // Actualizar la información
+            document.getElementById('city-name').textContent = `${data.city}, ${data.country}`;
+            document.getElementById('weather-description').textContent = capitalizeFirstLetter(data.description);
+            document.getElementById('temperature').textContent = `${Math.round(data.temperature)}°C`;
+            document.getElementById('feels-like').textContent = `${Math.round(data.feels_like)}°C`;
+            document.getElementById('humidity').textContent = `${data.humidity}%`;
+            document.getElementById('wind-speed').textContent = `${data.wind_speed} m/s`;
+            document.getElementById('pressure').textContent = `${data.pressure} hPa`;
+            document.getElementById('clouds').textContent = `${data.clouds}%`;
+            
+            // Actualizar el icono
+            const iconUrl = `https://openweathermap.org/img/wn/${data.icon}@2x.png`;
+            document.getElementById('weather-icon').src = iconUrl;
+        }
+
+        // Función para mostrar mensajes de error
+        function showError(message) {
+            const errorElement = document.getElementById('error-message');
+            errorElement.textContent = message;
+            errorElement.style.display = 'block';
+            
+            // Ocultar resultados si hay error
+            document.getElementById('weather-result').classList.remove('visible');
+        }
+
+        // Función auxiliar para capitalizar texto
+        function capitalizeFirstLetter(string) {
+            return string.charAt(0).toUpperCase() + string.slice(1);
+        }
+
+        // Event listeners
+        document.getElementById('search-button').addEventListener('click', () => {
+            const city = document.getElementById('city-input').value.trim();
+            if (city) {
+                getWeatherData(city);
+            } else {
+                showError('Por favor, ingresa el nombre de una ciudad');
+            }
+        });
+
+        document.getElementById('city-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const city = document.getElementById('city-input').value.trim();
+                if (city) {
+                    getWeatherData(city);
+                } else {
+                    showError('Por favor, ingresa el nombre de una ciudad');
+                }
+            }
+        });
+    </script>
+</body>
+</html> 

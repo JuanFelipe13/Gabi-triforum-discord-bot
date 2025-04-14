@@ -2,7 +2,7 @@ import logging
 import os
 import sys
 from src.core import MusicBot
-from src.web import init_web
+from src.web.app import init_web, create_app
 
 def resource_path(relative_path):
     try:
@@ -42,4 +42,4 @@ def main():
         sys.exit(1)
 
 if __name__ == "__main__":
-    main()
+    main() 

@@ -106,7 +106,7 @@ async def handle_url(ctx, url, player):
                     if not entry:
                         continue
                     song_info = {
-                        'webpage_url': entry.get('url') or entry.get('webpage_url'),
+                        'webpage_url': entry.get('webpage_url', url),
                         'title': entry.get('title', 'No disponible'),
                         'duration': entry.get('duration', 0)
                     }
@@ -114,7 +114,7 @@ async def handle_url(ctx, url, player):
 
             else:
                 song_info = {
-                    'webpage_url': info.get('url') or info.get('webpage_url'),
+                    'webpage_url': info.get('webpage_url', url),
                     'title': info.get('title', 'No disponible'),
                     'duration': info.get('duration', 0)
                 }
