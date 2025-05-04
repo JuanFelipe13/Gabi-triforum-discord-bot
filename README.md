@@ -1,112 +1,112 @@
-# TriForum Bot
+# Project Documentation
 
-Un bot de Discord multifuncional que integra múltiples APIs para proporcionar servicios de música, información meteorológica y procesamiento de contenido multimedia.
+## 1. Overview
 
-## Características principales
+This Discord bot provides music playback, playlist management (via `playlists.json`), and Twitter/X video embedding. It includes a supplementary Flask web interface for music search, basic playlist interaction, and weather display.
 
-- **Reproducción de música**: Busca y reproduce música desde YouTube en canales de voz de Discord
-- **Gestión de listas de reproducción**: Crea y gestiona listas de reproducción personalizadas
-- **Información meteorológica**: Consulta el clima actual de cualquier ciudad
-- **Procesamiento de contenido de Twitter**: Extrae y reproduce contenido multimedia desde Twitter/X
+## 2. Project Structure
 
-## APIs Integradas
-
-Este proyecto integra las siguientes APIs:
-
-1. **Discord API** (a través de discord.py)
-   - Gestión de mensajes y comandos
-   - Interacción con canales de voz
-   - Permisos y roles de servidores
-
-2. **YouTube API** (a través de yt-dlp)
-   - Búsqueda de contenido
-   - Extracción de información de videos
-   - Streaming de audio en tiempo real
-
-3. **Twitter API**
-   - Procesamiento de enlaces y contenido de Twitter/X
-   - Extracción de videos y contenido multimedia
-   - Compatibilidad con múltiples dominios (twitter.com, x.com, fxtwitter.com)
-
-4. **OpenWeatherMap API**
-   - Información meteorológica en tiempo real
-   - Datos de temperatura, humedad, viento, etc.
-   - Cobertura mundial de ciudades
-
-## Instalación
-
-1. Clona este repositorio:
-```bash
-git clone https://github.com/yourusername/Ai-voice-chatbot-for-triforum.git
-cd Ai-voice-chatbot-for-triforum
+```
+├── src/
+│   ├── core/
+│   │   ├── __init__.py           # Core package init
+│   │   ├── bot.py                # Main Bot class
+│   │   ├── constants.py          # Constants (URLs, yt-dlp/ffmpeg options)
+│   │   ├── music_player.py       # Guild-specific music playback & queue
+│   │   ├── playlist_manager.py   # Playlist loading/saving (playlists.json)
+│   │   └── state.py              # Global store for active MusicPlayer instances
+│   ├── commands/
+│   │   ├── __init__.py           # Commands package init & cog setup
+│   │   ├── music.py              # Music playback commands
+│   │   ├── playlist.py           # Playlist management commands
+│   │   ├── twitter.py            # Twitter integration command & listener
+│   │   └── utils.py              # Command utility functions
+│   ├── web/
+│   │   ├── __init__.py           # Web package init
+│   │   ├── app.py                # Flask web application & API
+│   │   └── templates/
+│   │       ├── index.html        # Main web UI page
+│   │       └── weather.html      # Weather web UI page
+│   ├── __init__.py               # Src package init
+│   └── core.py                 # Deprecated bot file
+├── .env                        # Environment variables (DISCORD_TOKEN)
+├── config.json                 # Optional configuration (prefix)
+├── playlists.json              # Saved user playlists
+├── requirements.txt            # Python dependencies
+└── documentation.md            # This documentation
 ```
 
-2. Instala las dependencias:
-```bash
-pip install -r requirements.txt
-```
+## 3. Core Components (`src/core`)
 
-3. Instala FFmpeg (necesario para la reproducción de audio):
-   - Windows: Descarga desde [ffmpeg.org](https://ffmpeg.org/download.html) y añade al PATH
-   - Linux: `sudo apt-get install ffmpeg`
-   - macOS: `brew install ffmpeg`
+*   **`bot.py`:** Defines `MusicBot`. Handles connection, configuration, prefix logic, event processing (e.g., `on_voice_state_update`), and extension loading.
+*   **`constants.py`:** Defines shared constants like `URL_REGEX`, `YTDLP_OPTIONS`, `FFMPEG_OPTIONS`.
+*   **`music_player.py`:** Defines `MusicPlayer`. Manages per-guild audio queue, stream extraction (`yt-dlp`), playback (`FFmpegOpusAudio`), and state.
+*   **`playlist_manager.py`:** Defines `PlaylistManager`. Handles CRUD operations for user playlists stored in `playlists.json`.
+*   **`state.py`:** Provides the global `players` dictionary mapping guild IDs to `MusicPlayer` instances.
 
-4. Configura las credenciales:
-   - Crea un archivo `.env` en la raíz del proyecto
-   - Añade tu token de Discord: `DISCORD_TOKEN=tu_token_aquí`
+## 4. Commands (`src/commands`)
 
-5. Inicia el bot:
-```bash
-python main.py
-```
+Implemented as `discord.py` Cogs loaded via `src.commands.__init__.py`.
 
-## Interfaz Web
+*   **`music.py`:** Contains `MusicCommands` (e.g., `!play`, `!skip`, `!queue`, `!stop`, `!leave`, `!remove`).
+*   **`playlist.py`:** Contains `PlaylistCommands` (e.g., `!createlist`, `!addtolist`, `!showlist`, `!playlist`, `!mylists`).
+*   **`twitter.py`:** Contains `TwitterCommands` (`!twitter on/off`) and the `on_message` listener for auto-posting videos from links.
+*   **`utils.py`:** Shared functions for commands, including `get_player`, `handle_search`, `handle_url`.
 
-El proyecto incluye una interfaz web simple que permite:
-- Ver el estado del bot
-- Buscar música en YouTube
-- Ver las listas de reproducción
-- Consultar información meteorológica
+## 5. Web Interface (`src/web`)
 
-Para acceder a la interfaz web, abre un navegador y visita:
-```
-http://localhost:5000
-```
+A Flask application defined in `app.py`.
 
-## Uso del Bot en Discord
+*   **`app.py`:** Creates the Flask app, defines routes (`/`, `/weather`), and API endpoints (`/api/status`, `/api/playlists`, `/api/search`, `/api/playlist/add`, `/api/weather`). Includes Swagger UI setup (`/swagger`). Launched via `init_web`.
+*   **`templates/`:** Contains `index.html` (main UI) and `weather.html`.
 
-El bot responde a los siguientes comandos (prefijo predeterminado: `!`):
+## 6. Usage
 
-- `!play <canción o URL>`: Reproduce una canción
-- `!pause`: Pausa la reproducción actual
-- `!resume`: Reanuda la reproducción
-- `!skip`: Salta a la siguiente canción
-- `!queue`: Muestra la cola de reproducción
-- `!playlist create <nombre>`: Crea una nueva lista de reproducción
-- `!playlist add <nombre> <canción>`: Añade una canción a una lista
-- `!playlist play <nombre>`: Reproduce una lista completa
+### Setup
 
-## Requisitos
+1.  **Install Dependencies:** `pip install -r requirements.txt`. Requires Python and FFmpeg (in system PATH).
+2.  **Configure Token:** Create `.env` file with `DISCORD_TOKEN=YOUR_BOT_TOKEN`.
+3.  **(Optional) Configure Prefix:** Modify `config.json` to change the default command prefix (`!`).
+4.  **Run:** Execute the bot's main entry point script.
 
-- Python 3.8 o superior
-- FFmpeg
-- Conexión a Internet
-- Token de bot de Discord
+### Discord Commands
 
-## Contribuir
+*(Assumes `!` prefix)*
 
-Las contribuciones son bienvenidas. Por favor, sigue estos pasos:
+**Music:**
 
-1. Haz fork del repositorio
-2. Crea una rama para tu función (`git checkout -b feature/amazing-feature`)
-3. Haz commit de tus cambios (`git commit -m 'Add some amazing feature'`)
-4. Haz push a la rama (`git push origin feature/amazing-feature`)
-5. Abre un Pull Request
+*   `!play [query/URL]`: Play/add song/playlist or search; resumes if paused/stopped.
+*   `!stop`: Pause playback.
+*   `!resume`: Resume playback.
+*   `!skip`: Skip current track.
+*   `!queue` / `!q`: Display queue.
+*   `!remove <index>`: Remove track by index.
+*   `!next <index>`: Move track by index to front.
+*   `!playnow [query/URL]`: Play immediately, queueing current track after.
+*   `!shuffle`: Shuffle queue.
+*   `!clean`: Clear queue and stop playback.
+*   `!leave`: Disconnect bot.
 
-## Licencia
+**Playlists:**
 
-Este proyecto está licenciado bajo la Licencia MIT - consulta el archivo LICENSE para más detalles.
+*   `!createlist <name>`: Create playlist.
+*   `!addtolist <name> <query/URL>`: Add song to playlist.
+*   `!removefromlist <name> <index>`: Remove song from playlist by index.
+*   `!showlist <name>`: Display playlist contents.
+*   `!playlist <name>`: Add playlist to queue.
+*   `!mylists`: List user's playlists.
 
-## Créditos
+**Twitter:**
 
-Desarrollado como parte de un proyecto académico para demostrar la integración de múltiples APIs en una aplicación funcional. 
+*   `!twitter on/off`: Toggle auto-video posting for the channel.
+*   `!twitter`: Check current status for the channel.
+    *(Posts videos from `twitter.com`/`x.com` links if enabled)*
+
+### Web Interface
+
+1.  **Access:** Navigate to the host/port specified during bot startup (default `http://127.0.0.1:8000`).
+2.  **Features:**
+    *   **Search (`/`):** Find YouTube tracks via `/api/search`.
+    *   **Playlists (`/`):** View playlists (`/api/playlists`), add songs from search (`/api/playlist/add`).
+    *   **Weather (`/weather`):** Check weather via `/api/weather`.
+    *   **API Docs (`/swagger`):** View API specification.
