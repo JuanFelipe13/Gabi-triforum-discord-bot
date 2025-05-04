@@ -1,3 +1,4 @@
+"""Core constants used throughout the application."""
 import re
 
 URL_REGEX = re.compile(
@@ -8,6 +9,7 @@ URL_REGEX = re.compile(
     r'(?::\d+)?'  
     r'(?:/?|[/?]\S+)$', re.IGNORECASE
 )
+"""Regular expression for matching URLs."""
 
 YTDLP_SEARCH_OPTIONS = {
     'format': 'bestaudio/best',
@@ -25,6 +27,7 @@ YTDLP_SEARCH_OPTIONS = {
     'source_address': '0.0.0.0',
     'cachedir': False
 }
+"""Options dictionary for yt-dlp when performing searches."""
 
 YTDLP_OPTIONS = {
     'format': 'bestaudio/best',
@@ -51,8 +54,10 @@ YTDLP_OPTIONS = {
     'live_from_start': True,
     'live_buffer_size': 32768
 }
+"""Options dictionary for yt-dlp when extracting audio/video information."""
 
 FFMPEG_OPTIONS = {
-    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -timeout 10000000 -nostdin -nostats',
-    'options': '-vn -b:a 160k -bufsize 320k -probesize 1M -analyzeduration 1M -ar 48000 -ac 2 -thread_queue_size 2048 -max_muxing_queue_size 2048'
-} 
+    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -timeout 10000000 -nostdin -nostats -thread_queue_size 2048',
+    'options': '-vn -b:a 160k -bufsize 320k -probesize 1M -analyzeduration 1M -ar 48000 -ac 2 -max_muxing_queue_size 2048'
+}
+"""Options dictionary for FFmpeg audio processing.""" 

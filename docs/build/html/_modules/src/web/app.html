@@ -1,0 +1,449 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>src.web.app &mdash; gabi triforum 2025 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=cb975c41"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html" class="icon icon-home">
+            gabi triforum
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/modules.html">src</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">gabi triforum</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">src.web.app</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for src.web.app</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">threading</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">flask</span><span class="w"> </span><span class="kn">import</span> <span class="n">Flask</span><span class="p">,</span> <span class="n">render_template</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="n">jsonify</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">yt_dlp</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">flasgger</span><span class="w"> </span><span class="kn">import</span> <span class="n">Swagger</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">..core.constants</span><span class="w"> </span><span class="kn">import</span> <span class="n">YTDLP_SEARCH_OPTIONS</span>
+
+<div class="viewcode-block" id="create_app">
+<a class="viewcode-back" href="../../../api/src.web.html#src.web.app.create_app">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">create_app</span><span class="p">(</span><span class="n">bot</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">Flask</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;bot&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">bot</span>
+    
+    <span class="n">swagger_config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;headers&quot;</span><span class="p">:</span> <span class="p">[],</span>
+        <span class="s2">&quot;specs&quot;</span><span class="p">:</span> <span class="p">[</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;endpoint&quot;</span><span class="p">:</span> <span class="s1">&#39;apispec&#39;</span><span class="p">,</span>
+                <span class="s2">&quot;route&quot;</span><span class="p">:</span> <span class="s1">&#39;/apispec.json&#39;</span><span class="p">,</span>
+                <span class="s2">&quot;rule_filter&quot;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">rule</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                <span class="s2">&quot;model_filter&quot;</span><span class="p">:</span> <span class="k">lambda</span> <span class="n">tag</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="p">}</span>
+        <span class="p">],</span>
+        <span class="s2">&quot;static_url_path&quot;</span><span class="p">:</span> <span class="s2">&quot;/flasgger_static&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;swagger_ui&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="s2">&quot;specs_route&quot;</span><span class="p">:</span> <span class="s2">&quot;/swagger&quot;</span>
+    <span class="p">}</span>
+    
+    <span class="n">swagger_template</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;swagger&quot;</span><span class="p">:</span> <span class="s2">&quot;2.0&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;info&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;Music Bot API&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;API para el bot de música de Discord&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="s2">&quot;1.0.0&quot;</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;host&quot;</span><span class="p">:</span> <span class="s2">&quot;127.0.0.1:8000&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;basePath&quot;</span><span class="p">:</span> <span class="s2">&quot;/&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;schemes&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;http&quot;</span><span class="p">]</span>
+    <span class="p">}</span>
+    
+    <span class="n">Swagger</span><span class="p">(</span><span class="n">app</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="n">swagger_config</span><span class="p">,</span> <span class="n">template</span><span class="o">=</span><span class="n">swagger_template</span><span class="p">)</span>
+    
+    <span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">index</span><span class="p">():</span>
+        <span class="k">return</span> <span class="n">render_template</span><span class="p">(</span><span class="s1">&#39;index.html&#39;</span><span class="p">)</span>
+    
+    <span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/weather&#39;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">weather_page</span><span class="p">():</span>
+        <span class="k">return</span> <span class="n">render_template</span><span class="p">(</span><span class="s1">&#39;weather.html&#39;</span><span class="p">)</span>
+    
+    <span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/api/status&#39;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">status</span><span class="p">():</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Obtener el estado del bot</span>
+<span class="sd">        ---</span>
+<span class="sd">        tags:</span>
+<span class="sd">          - Status</span>
+<span class="sd">        responses:</span>
+<span class="sd">          200:</span>
+<span class="sd">            description: Estado del bot</span>
+<span class="sd">            schema:</span>
+<span class="sd">              type: object</span>
+<span class="sd">              properties:</span>
+<span class="sd">                connected:</span>
+<span class="sd">                  type: boolean</span>
+<span class="sd">                guilds:</span>
+<span class="sd">                  type: integer</span>
+<span class="sd">                uptime:</span>
+<span class="sd">                  type: string</span>
+<span class="sd">          404:</span>
+<span class="sd">            description: Bot no disponible</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;bot&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Bot no disponible&quot;</span><span class="p">}),</span> <span class="mi">404</span>
+            
+        <span class="n">status_data</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;connected&quot;</span><span class="p">:</span> <span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;bot&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">is_ready</span><span class="p">(),</span>
+            <span class="s2">&quot;guilds&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">app</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;bot&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">guilds</span><span class="p">),</span>
+            <span class="s2">&quot;uptime&quot;</span><span class="p">:</span> <span class="s2">&quot;Desconocido&quot;</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">status_data</span><span class="p">)</span>
+    
+    <span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/api/playlists&#39;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">playlists</span><span class="p">():</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Obtener todas las listas de reproducción</span>
+<span class="sd">        ---</span>
+<span class="sd">        tags:</span>
+<span class="sd">          - Playlists</span>
+<span class="sd">        responses:</span>
+<span class="sd">          200:</span>
+<span class="sd">            description: Lista de playlists</span>
+<span class="sd">            schema:</span>
+<span class="sd">              type: array</span>
+<span class="sd">              items:</span>
+<span class="sd">                type: object</span>
+<span class="sd">          500:</span>
+<span class="sd">            description: Error al cargar las playlists</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">playlist_path</span> <span class="o">=</span> <span class="s1">&#39;playlists.json&#39;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">playlist_path</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">jsonify</span><span class="p">([])</span>
+            
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">playlist_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">playlists_data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">playlists_data</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}),</span> <span class="mi">500</span>
+    
+    <span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/api/search&#39;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">search</span><span class="p">():</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Buscar canciones en YouTube</span>
+<span class="sd">        ---</span>
+<span class="sd">        tags:</span>
+<span class="sd">          - Search</span>
+<span class="sd">        parameters:</span>
+<span class="sd">          - name: q</span>
+<span class="sd">            in: query</span>
+<span class="sd">            type: string</span>
+<span class="sd">            required: true</span>
+<span class="sd">            description: Término de búsqueda</span>
+<span class="sd">        responses:</span>
+<span class="sd">          200:</span>
+<span class="sd">            description: Resultados de la búsqueda</span>
+<span class="sd">            schema:</span>
+<span class="sd">              type: array</span>
+<span class="sd">              items:</span>
+<span class="sd">                type: object</span>
+<span class="sd">                properties:</span>
+<span class="sd">                  title:</span>
+<span class="sd">                    type: string</span>
+<span class="sd">                  url:</span>
+<span class="sd">                    type: string</span>
+<span class="sd">                  webpage_url:</span>
+<span class="sd">                    type: string</span>
+<span class="sd">                  thumbnail:</span>
+<span class="sd">                    type: string</span>
+<span class="sd">                  duration:</span>
+<span class="sd">                    type: integer</span>
+<span class="sd">                  channel:</span>
+<span class="sd">                    type: string</span>
+<span class="sd">          400:</span>
+<span class="sd">            description: Consulta vacía</span>
+<span class="sd">          500:</span>
+<span class="sd">            description: Error en la búsqueda</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;q&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">query</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Consulta vacía&quot;</span><span class="p">}),</span> <span class="mi">400</span>
+            
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">search_url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;ytsearch5:</span><span class="si">{</span><span class="n">query</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="k">with</span> <span class="n">yt_dlp</span><span class="o">.</span><span class="n">YoutubeDL</span><span class="p">(</span><span class="n">YTDLP_SEARCH_OPTIONS</span><span class="p">)</span> <span class="k">as</span> <span class="n">ydl</span><span class="p">:</span>
+                <span class="n">info</span> <span class="o">=</span> <span class="n">ydl</span><span class="o">.</span><span class="n">extract_info</span><span class="p">(</span><span class="n">search_url</span><span class="p">,</span> <span class="n">download</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">info</span> <span class="ow">or</span> <span class="s1">&#39;entries&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">info</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">jsonify</span><span class="p">([])</span>
+                
+            <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">info</span><span class="p">[</span><span class="s1">&#39;entries&#39;</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="n">entry</span><span class="p">:</span>
+                    <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+                        <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;title&#39;</span><span class="p">,</span> <span class="s1">&#39;Sin título&#39;</span><span class="p">),</span>
+                        <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;url&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
+                        <span class="s2">&quot;webpage_url&quot;</span><span class="p">:</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;webpage_url&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
+                        <span class="s2">&quot;thumbnail&quot;</span><span class="p">:</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;thumbnail&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
+                        <span class="s2">&quot;duration&quot;</span><span class="p">:</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;duration&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                        <span class="s2">&quot;channel&quot;</span><span class="p">:</span> <span class="n">entry</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;channel&#39;</span><span class="p">,</span> <span class="s1">&#39;Desconocido&#39;</span><span class="p">)</span>
+                    <span class="p">})</span>
+            
+            <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}),</span> <span class="mi">500</span>
+    
+    <span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/api/playlist/add&#39;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;POST&#39;</span><span class="p">])</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add_to_playlist</span><span class="p">():</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Añadir una canción a una playlist</span>
+<span class="sd">        ---</span>
+<span class="sd">        tags:</span>
+<span class="sd">          - Playlists</span>
+<span class="sd">        parameters:</span>
+<span class="sd">          - name: body</span>
+<span class="sd">            in: body</span>
+<span class="sd">            required: true</span>
+<span class="sd">            schema:</span>
+<span class="sd">              type: object</span>
+<span class="sd">              required:</span>
+<span class="sd">                - playlist</span>
+<span class="sd">                - song</span>
+<span class="sd">              properties:</span>
+<span class="sd">                playlist:</span>
+<span class="sd">                  type: string</span>
+<span class="sd">                  description: Nombre de la playlist</span>
+<span class="sd">                song:</span>
+<span class="sd">                  type: object</span>
+<span class="sd">                  description: Información de la canción</span>
+<span class="sd">        responses:</span>
+<span class="sd">          200:</span>
+<span class="sd">            description: Canción añadida exitosamente</span>
+<span class="sd">            schema:</span>
+<span class="sd">              type: object</span>
+<span class="sd">              properties:</span>
+<span class="sd">                success:</span>
+<span class="sd">                  type: boolean</span>
+<span class="sd">                message:</span>
+<span class="sd">                  type: string</span>
+<span class="sd">          400:</span>
+<span class="sd">            description: Datos inválidos</span>
+<span class="sd">          500:</span>
+<span class="sd">            description: Error al procesar la solicitud</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">playlist_path</span> <span class="o">=</span> <span class="s1">&#39;playlists.json&#39;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">json</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">data</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Datos no proporcionados&quot;</span><span class="p">}),</span> <span class="mi">400</span>
+            
+        <span class="n">playlist_name</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;playlist&#39;</span><span class="p">)</span>
+        <span class="n">song</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;song&#39;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">playlist_name</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">song</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Nombre de lista o canción no especificado&quot;</span><span class="p">}),</span> <span class="mi">400</span>
+        
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">playlists</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">playlist_path</span><span class="p">):</span>
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">playlist_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                    <span class="n">playlists</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="n">playlist_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">playlists</span><span class="p">:</span>
+                <span class="n">playlists</span><span class="p">[</span><span class="n">playlist_name</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+            
+            <span class="n">song_exists</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">for</span> <span class="n">existing_song</span> <span class="ow">in</span> <span class="n">playlists</span><span class="p">[</span><span class="n">playlist_name</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="n">existing_song</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;title&#39;</span><span class="p">)</span> <span class="o">==</span> <span class="n">song</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;title&#39;</span><span class="p">):</span>
+                    <span class="n">song_exists</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="k">break</span>
+            
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">song_exists</span><span class="p">:</span>
+                <span class="n">playlists</span><span class="p">[</span><span class="n">playlist_name</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">song</span><span class="p">)</span>
+                
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">playlist_path</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                    <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">playlists</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">ensure_ascii</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+                
+                <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Canción añadida a la lista </span><span class="si">{</span><span class="n">playlist_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">})</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;success&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;La canción ya existe en la lista&quot;</span><span class="p">})</span>
+                
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}),</span> <span class="mi">500</span>
+    
+    <span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s1">&#39;/api/weather&#39;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">weather</span><span class="p">():</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Obtener información del clima</span>
+<span class="sd">        ---</span>
+<span class="sd">        tags:</span>
+<span class="sd">          - Weather</span>
+<span class="sd">        parameters:</span>
+<span class="sd">          - name: city</span>
+<span class="sd">            in: query</span>
+<span class="sd">            type: string</span>
+<span class="sd">            required: true</span>
+<span class="sd">            description: Nombre de la ciudad</span>
+<span class="sd">        responses:</span>
+<span class="sd">          200:</span>
+<span class="sd">            description: Información del clima</span>
+<span class="sd">            schema:</span>
+<span class="sd">              type: object</span>
+<span class="sd">              properties:</span>
+<span class="sd">                city:</span>
+<span class="sd">                  type: string</span>
+<span class="sd">                country:</span>
+<span class="sd">                  type: string</span>
+<span class="sd">                temperature:</span>
+<span class="sd">                  type: number</span>
+<span class="sd">                feels_like:</span>
+<span class="sd">                  type: number</span>
+<span class="sd">                humidity:</span>
+<span class="sd">                  type: integer</span>
+<span class="sd">                pressure:</span>
+<span class="sd">                  type: integer</span>
+<span class="sd">                description:</span>
+<span class="sd">                  type: string</span>
+<span class="sd">                icon:</span>
+<span class="sd">                  type: string</span>
+<span class="sd">                wind_speed:</span>
+<span class="sd">                  type: number</span>
+<span class="sd">                clouds:</span>
+<span class="sd">                  type: integer</span>
+<span class="sd">          400:</span>
+<span class="sd">            description: Ciudad no especificada</span>
+<span class="sd">          500:</span>
+<span class="sd">            description: Error al obtener el clima</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">city</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;city&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">city</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;Ciudad no especificada&quot;</span><span class="p">}),</span> <span class="mi">400</span>
+        
+        <span class="n">api_key</span> <span class="o">=</span> <span class="s2">&quot;4d8fb5b93d4af21d66a2948710284366&quot;</span>
+        
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;https://api.openweathermap.org/data/2.5/weather?q=</span><span class="si">{</span><span class="n">city</span><span class="si">}</span><span class="s2">&amp;appid=</span><span class="si">{</span><span class="n">api_key</span><span class="si">}</span><span class="s2">&amp;units=metric&amp;lang=es&quot;</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+            
+            <span class="k">if</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span> <span class="o">!=</span> <span class="mi">200</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="n">data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;message&#39;</span><span class="p">,</span> <span class="s1">&#39;Error en la API del clima&#39;</span><span class="p">)}),</span> <span class="n">response</span><span class="o">.</span><span class="n">status_code</span>
+            
+            <span class="n">weather_data</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;city&quot;</span><span class="p">:</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">],</span>
+                <span class="s2">&quot;country&quot;</span><span class="p">:</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;sys&#39;</span><span class="p">][</span><span class="s1">&#39;country&#39;</span><span class="p">],</span>
+                <span class="s2">&quot;temperature&quot;</span><span class="p">:</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;main&#39;</span><span class="p">][</span><span class="s1">&#39;temp&#39;</span><span class="p">],</span>
+                <span class="s2">&quot;feels_like&quot;</span><span class="p">:</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;main&#39;</span><span class="p">][</span><span class="s1">&#39;feels_like&#39;</span><span class="p">],</span>
+                <span class="s2">&quot;humidity&quot;</span><span class="p">:</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;main&#39;</span><span class="p">][</span><span class="s1">&#39;humidity&#39;</span><span class="p">],</span>
+                <span class="s2">&quot;pressure&quot;</span><span class="p">:</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;main&#39;</span><span class="p">][</span><span class="s1">&#39;pressure&#39;</span><span class="p">],</span>
+                <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;weather&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;description&#39;</span><span class="p">],</span>
+                <span class="s2">&quot;icon&quot;</span><span class="p">:</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;weather&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;icon&#39;</span><span class="p">],</span>
+                <span class="s2">&quot;wind_speed&quot;</span><span class="p">:</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;wind&#39;</span><span class="p">][</span><span class="s1">&#39;speed&#39;</span><span class="p">],</span>
+                <span class="s2">&quot;clouds&quot;</span><span class="p">:</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;clouds&#39;</span><span class="p">][</span><span class="s1">&#39;all&#39;</span><span class="p">]</span>
+            <span class="p">}</span>
+            
+            <span class="k">return</span> <span class="n">jsonify</span><span class="p">(</span><span class="n">weather_data</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">jsonify</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)}),</span> <span class="mi">500</span>
+    
+    <span class="k">return</span> <span class="n">app</span></div>
+
+
+<div class="viewcode-block" id="init_web">
+<a class="viewcode-back" href="../../../api/src.web.html#src.web.app.init_web">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">init_web</span><span class="p">(</span><span class="n">bot</span><span class="p">,</span> <span class="n">host</span><span class="o">=</span><span class="s1">&#39;127.0.0.1&#39;</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">5000</span><span class="p">):</span>
+    <span class="n">app</span> <span class="o">=</span> <span class="n">create_app</span><span class="p">(</span><span class="n">bot</span><span class="p">)</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">run_app</span><span class="p">():</span>
+        <span class="n">app</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="n">port</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">use_reloader</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    
+    <span class="n">web_thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">run_app</span><span class="p">,</span> <span class="n">daemon</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">web_thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Servidor web iniciado en http://</span><span class="si">{</span><span class="n">host</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">port</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">web_thread</span> </div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Juan Felipe Navia Rivera.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
