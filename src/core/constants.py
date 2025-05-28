@@ -14,7 +14,7 @@ URL_REGEX = re.compile(
 # Path to the cookies file. Update this with the actual path on your server.
 # Example: '/path/to/your/cookies.txt'
 # Set to None if you are not using a cookies file.
-YTDLP_COOKIES_FILE = None # IMPORTANT: Update this path
+YTDLP_COOKIES_FILE = '/home/ec2-user/Gabi-triforum-discord-bot/cookies.txt'
 """Path to the cookies file for yt-dlp authentication."""
 
 YTDLP_SEARCH_OPTIONS = {
