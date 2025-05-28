@@ -128,7 +128,7 @@ def create_app(bot=None):
 
     return app
 
-def init_web(bot, host='127.0.0.1', port=5000):
+def init_web(bot, host='0.0.0.0', port=5000):
     """Initializes and starts the Flask web server in a separate thread."""
     app = create_app(bot)
     

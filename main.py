@@ -31,8 +31,8 @@ def main():
         
         # Iniciar la aplicación web en un hilo separado
         logger.info("Iniciando aplicación web...")
-        init_web(bot, host='127.0.0.1', port=8000)
-        logger.info("Aplicación web iniciada en http://127.0.0.1:8000")
+        init_web(bot, host='0.0.0.0', port=8000)
+        logger.info("Aplicación web iniciada en http://0.0.0.0:8000")
         
         # Ejecutar el bot (esto bloqueará el hilo principal)
         bot.run(bot.discord_token)

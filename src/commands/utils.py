@@ -126,6 +126,11 @@ async def handle_url(ctx, url, player):
     try:
         with yt_dlp.YoutubeDL(YTDLP_OPTIONS_PLAYLIST_INFO) as ydl:
             info = await asyncio.to_thread(ydl.extract_info, url, download=False)
+
+            if info is None:
+                logger.error(f"yt-dlp returned None for URL: {url}. This might be an authentication issue or invalid URL.")
+                await ctx.send("❌ No se pudo obtener la información del video. Puede ser un problema de autenticación o que el URL sea inválido.")
+                return
             
             if 'entries' in info:
                 entries = info['entries']
