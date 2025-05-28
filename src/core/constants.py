@@ -51,7 +51,8 @@ YTDLP_OPTIONS_PLAYLIST_INFO = {
     'prefer_insecure': True,
     'legacy_server_connect': True,
     'live_from_start': True,
-    'live_buffer_size': 32768
+    'live_buffer_size': 32768,
+    'cookiesfrombrowser': ['chrome']
 }
 """Options dictionary for yt-dlp when extracting basic playlist/song information quickly."""
 
@@ -78,6 +79,7 @@ YTDLP_OPTIONS_PLAYBACK = {
     'legacy_server_connect': True,
     'live_from_start': True,
     'live_buffer_size': 32768,
+    'cookiesfrombrowser': ['chrome'],
     'postprocessors': [{
         'key': 'FFmpegExtractAudio',
         'preferredcodec': 'opus',
