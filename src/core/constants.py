@@ -11,6 +11,12 @@ URL_REGEX = re.compile(
 )
 """Regular expression for matching URLs."""
 
+# Path to the cookies file. Update this with the actual path on your server.
+# Example: '/path/to/your/cookies.txt'
+# Set to None if you are not using a cookies file.
+YTDLP_COOKIES_FILE = None # IMPORTANT: Update this path
+"""Path to the cookies file for yt-dlp authentication."""
+
 YTDLP_SEARCH_OPTIONS = {
     'format': 'bestaudio/best',
     'quiet': True,
@@ -53,6 +59,7 @@ YTDLP_OPTIONS_PLAYLIST_INFO = {
     'live_from_start': True,
     'live_buffer_size': 32768,
     # 'cookiesfrombrowser': ['chrome']  # Commented out for server deployment
+    'cookies': YTDLP_COOKIES_FILE if YTDLP_COOKIES_FILE else None,
 }
 """Options dictionary for yt-dlp when extracting basic playlist/song information quickly."""
 
@@ -80,6 +87,7 @@ YTDLP_OPTIONS_PLAYBACK = {
     'live_from_start': True,
     'live_buffer_size': 32768,
     # 'cookiesfrombrowser': ['chrome'], # Commented out for server deployment
+    'cookies': YTDLP_COOKIES_FILE if YTDLP_COOKIES_FILE else None,
     'postprocessors': [{
         'key': 'FFmpegExtractAudio',
         'preferredcodec': 'opus',
