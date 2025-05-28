@@ -58,7 +58,6 @@ YTDLP_OPTIONS_PLAYLIST_INFO = {
     'legacy_server_connect': True,
     'live_from_start': True,
     'live_buffer_size': 32768,
-    # 'cookiesfrombrowser': ['chrome']  # Commented out for server deployment
     'cookies': YTDLP_COOKIES_FILE if YTDLP_COOKIES_FILE else None,
 }
 """Options dictionary for yt-dlp when extracting basic playlist/song information quickly."""
@@ -86,7 +85,6 @@ YTDLP_OPTIONS_PLAYBACK = {
     'legacy_server_connect': True,
     'live_from_start': True,
     'live_buffer_size': 32768,
-    # 'cookiesfrombrowser': ['chrome'], # Commented out for server deployment
     'cookies': YTDLP_COOKIES_FILE if YTDLP_COOKIES_FILE else None,
     'postprocessors': [{
         'key': 'FFmpegExtractAudio',
