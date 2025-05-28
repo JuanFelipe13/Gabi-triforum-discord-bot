@@ -3,15 +3,16 @@ import logging
 import time
 from typing import Dict, Any, Optional
 from collections import deque
-from functools import lru_cache
 import yt_dlp
 import discord
-from .constants import YTDLP_OPTIONS, FFMPEG_OPTIONS
+from .constants import YTDLP_OPTIONS_PLAYBACK, FFMPEG_OPTIONS_TEMPLATE
 
 logger = logging.getLogger(__name__)
 
 class MusicPlayer:
+    """Manages the music queue and playback for a single guild."""
     def __init__(self, bot):
+        """Initializes the player state, queue, and event loop."""
         self.bot = bot
         self.queue = deque(maxlen=1000)  
         self.current: Optional[Dict[str, Any]] = None
@@ -21,64 +22,15 @@ class MusicPlayer:
         self.pause_time = None
         self._loop = asyncio.get_event_loop()
 
-    @lru_cache(maxsize=100)
-    async def _get_stream_url(self, url: str) -> Optional[str]:
-        max_retries = 3
-        retry_count = 0
-        
-        print(f"🔍 Intentando obtener stream URL para: {url}")
-        
-        while retry_count < max_retries:
-            try:
-                print(f"📥 Intento {retry_count + 1}/{max_retries} de extracción...")
-                with yt_dlp.YoutubeDL(YTDLP_OPTIONS) as ydl:
-                    print("⚙️ Iniciando extracción de información...")
-                    info = await asyncio.to_thread(ydl.extract_info, url, download=False)
-                    if info:
-                        print("✅ Información extraída correctamente")
-                        # Intentar obtener la mejor URL de audio
-                        formats = info.get('formats', [])
-                        if formats:
-                            print(f"📋 Buscando en {len(formats)} formatos disponibles...")
-                            # Filtrar formatos de audio
-                            audio_formats = [f for f in formats if f.get('acodec') != 'none']
-                            if audio_formats:
-                                # Seleccionar el mejor formato de audio
-                                best_audio = max(audio_formats, key=lambda f: f.get('abr', 0) if f.get('abr') else 0)
-                                stream_url = best_audio.get('url')
-                                if stream_url:
-                                    print(f"🎯 URL encontrada en formato de audio: {best_audio.get('format_id', 'unknown')}")
-                                    return stream_url
-                        
-                        # Si no se encontró en los formatos, intentar obtener la URL directamente
-                        stream_url = info.get('url')
-                        if stream_url:
-                            print("🎯 URL de stream encontrada directamente")
-                            return stream_url
-                    print("❌ No se encontró ninguna URL válida en la información")
-                    return None
-            except Exception as e:
-                print(f"⚠️ Error en intento {retry_count + 1}: {str(e)}")
-                logger.error(f"Intento {retry_count + 1}/{max_retries} falló: {e}")
-                retry_count += 1
-                if retry_count < max_retries:
-                    wait_time = 2 ** retry_count
-                    print(f"⏳ Esperando {wait_time} segundos antes del siguiente intento...")
-                    await asyncio.sleep(wait_time)
-                continue
-        
-        print("❌ Todos los intentos de obtener la URL fallaron")
-        logger.error(f"Error obteniendo stream URL después de {max_retries} intentos")
-        return None
-
     async def play_next(self, ctx):
+        """Plays the next song in the queue."""
         if not self.queue or not ctx.voice_client or not ctx.voice_client.is_connected():
             self.is_playing = False
             self.current = None
             return
 
         try:
-            print("\n🎵 Intentando reproducir siguiente canción...")
+            logger.debug("\n🎵 Intentando reproducir siguiente canción...")
             self.is_playing = True
             next_song = self.queue.popleft()
             self.current = next_song
@@ -87,80 +39,92 @@ class MusicPlayer:
 
             url = next_song.get('webpage_url')
             if not url:
-                print("❌ URL no encontrada en la información de la canción")
+                logger.error("❌ URL no encontrada en la información de la canción")
                 raise ValueError("URL no encontrada en la información de la canción")
                 
-            print(f"🔗 URL a procesar: {url}")
+            logger.debug(f"🔗 URL a procesar: {url}")
             
-            # Intentar obtener el stream directamente con yt-dlp
-            try:
-                print("⚙️ Extrayendo información con yt-dlp...")
-                with yt_dlp.YoutubeDL(YTDLP_OPTIONS) as ydl:
-                    info = await asyncio.to_thread(ydl.extract_info, url, download=False)
-                    if not info:
-                        raise ValueError("No se pudo extraer la información del video")
-                    
-                    # Intentar obtener la mejor URL de audio
-                    formats = info.get('formats', [])
-                    print(f"📋 Encontrados {len(formats)} formatos disponibles")
-                    
-                    # Filtrar formatos de audio y ordenarlos por calidad
-                    audio_formats = [f for f in formats if f.get('acodec') != 'none']
-                    if not audio_formats:
-                        raise ValueError("No se encontraron formatos de audio")
-                    
-                    # Seleccionar el mejor formato de audio
-                    best_audio = max(audio_formats, key=lambda f: f.get('abr', 0) if f.get('abr') else 0)
-                    stream_url = best_audio.get('url')
-                    
-                    if not stream_url:
-                        raise ValueError("No se encontró URL de stream")
-                    
-                    print(f"✅ Formato seleccionado: {best_audio.get('format_id')} - {best_audio.get('acodec')} - {best_audio.get('abr')}kbps")
-            
-            except Exception as e:
-                print(f"❌ Error extrayendo información: {e}")
-                raise
+            # Get current audio settings from bot config
+            current_bitrate = self.bot.audio_bitrate
+            current_sampling_rate = self.bot.audio_sampling_rate
+            current_audio_channels = self.bot.audio_channels
 
-            print("🎧 Creando fuente de audio...")
+            # Prepare YTDLP options (deep copy to avoid modifying global constant)
+            current_ytdlp_options = YTDLP_OPTIONS_PLAYBACK.copy()
+            # Opus is generally VBR, so preferredquality='0' is often best.
+            # If a specific bitrate is desired with Opus, it's typically handled by FFmpeg.
+            # Forcing it here might conflict or be ignored depending on yt-dlp version and Opus.
+            # We will let FFmpeg handle the bitrate precisely.
+
+            logger.debug("⚙️ Extrayendo información con yt-dlp...")
+            with yt_dlp.YoutubeDL(current_ytdlp_options) as ydl:
+                info = await asyncio.to_thread(ydl.extract_info, url, download=False)
+                if not info:
+                    raise ValueError("No se pudo extraer la información del video")
+                
+                formats = info.get('formats', [])
+                logger.debug(f"📋 Encontrados {len(formats)} formatos disponibles")
+                
+                audio_formats = [f for f in formats if f.get('acodec') != 'none']
+                if not audio_formats:
+                    raise ValueError("No se encontraron formatos de audio")
+                
+                best_audio = max(audio_formats, key=lambda f: f.get('abr', 0) if f.get('abr') else 0)
+                stream_url = best_audio.get('url')
+                
+                if not stream_url:
+                    raise ValueError("No se encontró URL de stream")
+                
+                logger.debug(f"✅ Formato seleccionado: {best_audio.get('format_id')} - {best_audio.get('acodec')} - {best_audio.get('abr')}kbps")
+            
+            logger.debug("🎧 Creando fuente de audio...")
             try:
-                # Intentar crear la fuente de audio con timeout
+                # Format FFMPEG options with the current settings
+                bufsize = current_bitrate * 2 
+                current_ffmpeg_options = {
+                    'before_options': FFMPEG_OPTIONS_TEMPLATE['before_options'],
+                    'options': FFMPEG_OPTIONS_TEMPLATE['options'].format(
+                        bitrate=current_bitrate, 
+                        bufsize=bufsize,
+                        sampling_rate=current_sampling_rate,
+                        audio_channels=current_audio_channels
+                    )
+                }
+
                 source_task = asyncio.create_task(
                     discord.FFmpegOpusAudio.from_probe(
                         stream_url,
-                        **FFMPEG_OPTIONS,
+                        **current_ffmpeg_options, # Use formatted options
                         method='fallback'
                     )
                 )
                 source = await asyncio.wait_for(source_task, timeout=30.0)
             except asyncio.TimeoutError:
-                print("⚠️ Timeout creando fuente de audio, reintentando...")
+                logger.warning("⚠️ Timeout creando fuente de audio, reintentando...")
                 raise ValueError("Timeout creando fuente de audio")
             
             def after_playing(error):
                 if error:
-                    print(f"❌ Error después de reproducir: {error}")
-                    logger.error(f"Error después de reproducir: {error}")
+                    logger.error(f"❌ Error después de reproducir: {error}")
                 asyncio.run_coroutine_threadsafe(
                     self.handle_song_complete(ctx), 
                     self._loop
                 )
             
-            print("▶️ Iniciando reproducción...")
+            logger.debug("▶️ Iniciando reproducción...")
             ctx.voice_client.play(source, after=after_playing)
             await ctx.send(f"🎵 Reproduciendo: {self.current['title']}")
-            print(f"✅ Reproducción iniciada: {self.current['title']}")
+            logger.info(f"✅ Reproducción iniciada: {self.current['title']}")
             
         except Exception as e:
-            print(f"❌ Error en play_next: {str(e)}")
-            logger.error(f"Error reproduciendo siguiente canción: {e}")
+            logger.error(f"❌ Error en play_next: {str(e)}")
             self.is_playing = False
             self.current = None
-            # Esperar un momento antes de intentar la siguiente canción
             await asyncio.sleep(2)
             await self.play_next(ctx)
 
     async def handle_song_complete(self, ctx):
+        """Called when a song finishes; plays the next or stops if queue is empty."""
         if self.queue:
             await self.play_next(ctx)
         else:
@@ -168,6 +132,7 @@ class MusicPlayer:
             self.current = None
 
     def get_current_duration(self) -> str:
+        """Returns the formatted current playback time and total duration."""
         if not self.current:
             return "0:00/0:00"
             
@@ -182,6 +147,7 @@ class MusicPlayer:
 
     @staticmethod
     def format_duration(duration: int) -> str:
+        """Formats a duration in seconds into H:MM:SS or M:SS format."""
         hours = int(duration // 3600)
         minutes = int((duration % 3600) // 60)
         seconds = int(duration % 60)

@@ -225,6 +225,29 @@
             border-radius: 4px;
             cursor: pointer;
         }
+        .audio-controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .audio-controls div {
+            flex: 1;
+        }
+        .audio-controls label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .audio-controls input[type="range"] {
+            width: 100%;
+        }
+        .audio-controls button {
+            padding: 10px 20px;
+            background-color: #7289DA;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -254,6 +277,31 @@
                 <button id="search-button">Buscar</button>
             </div>
             <div id="search-results" class="results"></div>
+        </div>
+
+        <div class="status-card">
+            <h2 class="card-title">Control de Audio</h2>
+            <div class="audio-controls">
+                <div>
+                    <label for="bitrate-slider">Bitrate (kbps): <span id="bitrate-value">128</span></label>
+                    <input type="range" id="bitrate-slider" min="32" max="320" value="128" step="32">
+                </div>
+                <div>
+                    <label for="sampling-rate-slider">Sampling Rate (Hz): <span id="sampling-rate-value">48000</span></label>
+                    <select id="sampling-rate-select">
+                        <option value="44100">44100 Hz</option>
+                        <option value="48000" selected>48000 Hz</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="audio-channels-slider">Audio Channels: <span id="audio-channels-value">2</span></label>
+                    <select id="audio-channels-select">
+                        <option value="1">1 (Mono)</option>
+                        <option value="2" selected>2 (Stereo)</option>
+                    </select>
+                </div>
+                <button id="apply-audio-settings">Aplicar Ajustes</button>
+            </div>
         </div>
 
         <div class="playlist-section">
@@ -435,6 +483,52 @@
                 console.error('Error creando playlist:', error);
                 showNotification(`Error al crear la lista: ${error.message}`, true);
             }
+        }
+
+        // Control de Audio
+        const bitrateSlider = document.getElementById('bitrate-slider');
+        const bitrateValue = document.getElementById('bitrate-value');
+        const samplingRateSelect = document.getElementById('sampling-rate-select');
+        const audioChannelsSelect = document.getElementById('audio-channels-select');
+        const applyAudioSettingsButton = document.getElementById('apply-audio-settings');
+
+        if (bitrateSlider && bitrateValue) {
+            bitrateSlider.addEventListener('input', () => {
+                bitrateValue.textContent = bitrateSlider.value;
+            });
+        }
+
+        if (applyAudioSettingsButton) {
+            applyAudioSettingsButton.addEventListener('click', async () => {
+                const bitrate = parseInt(bitrateSlider.value);
+                const samplingRate = parseInt(samplingRateSelect.value);
+                const audioChannels = parseInt(audioChannelsSelect.value);
+                
+                showNotification(`Aplicando ajustes: Bitrate ${bitrate}kbps, SR ${samplingRate}Hz, Channels ${audioChannels}`);
+
+                try {
+                    const response = await fetch('/api/audio_config', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ 
+                            bitrate: bitrate,
+                            sampling_rate: samplingRate,
+                            audio_channels: audioChannels
+                        }),
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        showNotification('Ajustes de audio aplicados correctamente.');
+                    } else {
+                        showNotification(data.error || 'Error aplicando ajustes de audio.', true);
+                    }
+                } catch (error) {
+                    showNotification(`Error de red: ${error.message}`, true);
+                    console.error('Error aplicando ajustes de audio:', error);
+                }
+            });
         }
 
         // Actualizar selectores de listas de reproducción

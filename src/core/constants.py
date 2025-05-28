@@ -19,21 +19,20 @@ YTDLP_SEARCH_OPTIONS = {
     'skip_download': True,
     'force_generic_extractor': True,
     'ignoreerrors': True,
-    'noplaylist': True,
     'nocheckcertificate': True,
     'logtostderr': False,
     'no_color': True,
     'default_search': 'ytsearch',
     'source_address': '0.0.0.0',
-    'cachedir': False
+    'cachedir': '.yt-dlp-cache'
 }
 """Options dictionary for yt-dlp when performing searches."""
 
-YTDLP_OPTIONS = {
+YTDLP_OPTIONS_PLAYLIST_INFO = {
     'format': 'bestaudio/best',
     'quiet': True,
     'no_warnings': True,
-    'extract_flat': False,
+    'extract_flat': 'in_playlist',
     'skip_download': True,
     'force_generic_extractor': False,
     'ignoreerrors': True,
@@ -42,7 +41,7 @@ YTDLP_OPTIONS = {
     'logtostderr': False,
     'no_color': True,
     'source_address': '0.0.0.0',
-    'cachedir': False,
+    'cachedir': '.yt-dlp-cache',
     'socket_timeout': 10,
     'retries': 3,
     'fragment_retries': 3,
@@ -54,10 +53,41 @@ YTDLP_OPTIONS = {
     'live_from_start': True,
     'live_buffer_size': 32768
 }
-"""Options dictionary for yt-dlp when extracting audio/video information."""
+"""Options dictionary for yt-dlp when extracting basic playlist/song information quickly."""
 
-FFMPEG_OPTIONS = {
-    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -timeout 10000000 -nostdin -nostats -thread_queue_size 2048',
-    'options': '-vn -b:a 160k -bufsize 320k -probesize 1M -analyzeduration 1M -ar 48000 -ac 2 -max_muxing_queue_size 2048'
+YTDLP_OPTIONS_PLAYBACK = {
+    'format': 'bestaudio/best',
+    'quiet': True,
+    'no_warnings': True,
+    'skip_download': True,
+    'force_generic_extractor': False,
+    'ignoreerrors': True,
+    'noplaylist': True,
+    'nocheckcertificate': True,
+    'logtostderr': False,
+    'no_color': True,
+    'source_address': '0.0.0.0',
+    'cachedir': '.yt-dlp-cache',
+    'socket_timeout': 10,
+    'retries': 3,
+    'fragment_retries': 3,
+    'http_chunk_size': 5242880,
+    'external_downloader_args': ['-timeout', '10'],
+    'youtube_include_dash_manifest': False,
+    'prefer_insecure': True,
+    'legacy_server_connect': True,
+    'live_from_start': True,
+    'live_buffer_size': 32768,
+    'postprocessors': [{
+        'key': 'FFmpegExtractAudio',
+        'preferredcodec': 'opus',
+        'preferredquality': '0',
+    }]
 }
-"""Options dictionary for FFmpeg audio processing.""" 
+"""Options dictionary for yt-dlp when extracting detailed audio/video information for playback."""
+
+FFMPEG_OPTIONS_TEMPLATE = {
+    'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5 -timeout 10000000 -nostdin -nostats -thread_queue_size 2048',
+    'options': '-vn -b:a {bitrate}k -bufsize {bufsize}k -probesize 1M -analyzeduration 1M -ar {sampling_rate} -ac {audio_channels} -max_muxing_queue_size 2048'
+}
+"""Template for FFmpeg audio processing options. Bitrate will be formatted in.""" 

@@ -19,29 +19,19 @@ YOUTUBE_REGEX = re.compile(
     r'(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})'
 )
 
-TWITTER_DL_OPTIONS = {
-    'format': 'bestvideo[ext=mp4]+bestaudio/best[ext=mp4]',  # Preferir el mejor video y audio en MP4
-    'quiet': True,
-    'no_warnings': True,
-    'extract_flat': False,
-    'ignoreerrors': True,
-    'nocheckcertificate': True,
-    'logtostderr': False,
-    'no_color': True,
-    'source_address': '0.0.0.0',
-    'cachedir': False
-}
-
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB en bytes
 
 class TwitterCommands(commands.Cog):
+    """Cog for handling Twitter/X link detection and media embedding."""
     def __init__(self, bot):
+        """Initializes the TwitterCommands cog and active channel tracking."""
         self.bot = bot
         self.active_channels: Dict[int, bool] = {}
         
     async def download_tweet_media(self, url: str) -> List[Tuple[str, str]]:
+        """Attempts to extract direct media URLs (video) from a Twitter/X or YouTube link."""
         try:
-            print(f"URL original: {url}")
+            logger.debug(f"URL original: {url}")
             
             # Convert Twitter URL to proper format
             if '@' in url:
@@ -49,7 +39,7 @@ class TwitterCommands(commands.Cog):
             elif not url.startswith(('http://', 'https://')):
                 url = 'https://' + url
             
-            print(f"URL después de formato básico: {url}")
+            logger.debug(f"URL después de formato básico: {url}")
             
             # Extract tweet ID
             tweet_id = None
@@ -58,11 +48,11 @@ class TwitterCommands(commands.Cog):
                 parts = url.split('/status/')
                 if len(parts) > 1:
                     tweet_id = parts[1].split('/')[0].split('?')[0]
-                    print(f"ID de tweet extraído: {tweet_id}")
+                    logger.debug(f"ID de tweet extraído: {tweet_id}")
                     
                     # Use TW-Down API for Twitter
                     api_url = f"https://twdown.net/download.php?type=videos&url=https://twitter.com/i/status/{tweet_id}"
-                    print(f"Usando TW-Down API: {api_url}")
+                    logger.debug(f"Usando TW-Down API: {api_url}")
                     
                     # Get the page content
                     response = await asyncio.to_thread(requests.get, api_url)
@@ -76,11 +66,11 @@ class TwitterCommands(commands.Cog):
                         
                         if video_matches:
                             best_url = video_matches[0]  # Get first match
-                            print(f"URL de video encontrado: {best_url}")
+                            logger.debug(f"URL de video encontrado: {best_url}")
                             return [('video', best_url)]
                             
             # If Twitter video extraction fails or URL is YouTube, try with yt-dlp
-            print(f"Usando yt-dlp para extraer video...")
+            logger.debug(f"Usando yt-dlp para extraer video...")
             # Configurar yt-dlp con opciones optimizadas
             ydl_opts = {
                 'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
@@ -101,17 +91,17 @@ class TwitterCommands(commands.Cog):
                 info = await asyncio.to_thread(ydl.extract_info, url, download=False)
                 
                 if not info:
-                    print("No se encontró información para el URL proporcionado.")
+                    logger.debug("No se encontró información para el URL proporcionado.")
                     return []
                 
-                print(f"Información extraída: {info.get('title', 'Sin título')}")
+                logger.debug(f"Información extraída: {info.get('title', 'Sin título')}")
                 
                 # Buscar el mejor formato de video
                 media_urls = []
                 
                 if 'formats' in info:
                     formats = info['formats']
-                    print(f"Encontrados {len(formats)} formatos")
+                    logger.debug(f"Encontrados {len(formats)} formatos")
                     
                     # Filtrar por formatos de video MP4
                     video_formats = [f for f in formats if 
@@ -126,30 +116,30 @@ class TwitterCommands(commands.Cog):
                                              x.get('tbr', 0)
                                          ))
                         
-                        print(f"Mejor formato encontrado: {best_format.get('format_id')}, "
+                        logger.debug(f"Mejor formato encontrado: {best_format.get('format_id')}, "
                               f"resolución: {best_format.get('width')}x{best_format.get('height')}")
                         
                         media_urls.append(('video', best_format['url']))
                 
                 # Si no hay formatos, intentar obtener el URL directo
                 if not media_urls and 'url' in info:
-                    print(f"Usando URL directo del video")
+                    logger.debug(f"Usando URL directo del video")
                     media_urls.append(('video', info['url']))
                     
                 if not media_urls:
-                    print("No se encontraron videos en el contenido.")
+                    logger.debug("No se encontraron videos en el contenido.")
                     return []
                     
                 return media_urls
                 
         except Exception as e:
-            print(f"Error descargando medios: {e}")
-            print(f"Tipo de error: {type(e)}")
+            logger.error(f"Error descargando medios: {e}, Tipo: {type(e)}")
             return []
 
     async def download_video(self, url: str) -> Optional[str]:
+        """Downloads a video from a direct URL to a temporary file."""
         try:
-            print(f"Intentando descargar video desde URL: {url}")
+            logger.debug(f"Intentando descargar video desde URL: {url}")
             # Crear directorio temporal si no existe
             os.makedirs('temp', exist_ok=True)
             
@@ -183,6 +173,7 @@ class TwitterCommands(commands.Cog):
             return None
         
     async def cleanup_temp_file(self, filepath: str):
+        """Safely removes a temporary file if it exists."""
         try:
             if os.path.exists(filepath):
                 os.remove(filepath)
@@ -191,6 +182,7 @@ class TwitterCommands(commands.Cog):
 
     @commands.command()
     async def twitter(self, ctx, option: str = None):
+        """Toggles automatic Twitter/X video embedding for the current channel or shows status."""
         if option is None:
             status = "activado" if self.active_channels.get(ctx.channel.id, False) else "desactivado"
             await ctx.send(f"📱 El detector de tweets está {status} en este canal")
@@ -207,6 +199,7 @@ class TwitterCommands(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message):
+        """Listener that checks messages for Twitter/X links and attempts to embed videos."""
         if message.author.bot:
             return
             

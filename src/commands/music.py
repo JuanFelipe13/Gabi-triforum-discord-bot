@@ -2,19 +2,21 @@ from discord.ext import commands
 import discord
 import logging
 from ..core.music_player import MusicPlayer
-from ..core.state import players
 from .utils import get_player, handle_url, handle_search, URL_REGEX
 import time
 
 logger = logging.getLogger(__name__)
 
 class MusicCommands(commands.Cog):
+    """Cog containing commands for music playback and queue management."""
     def __init__(self, bot):
+        """Initializes the MusicCommands cog."""
         self.bot = bot
 
     @commands.command()
     async def play(self, ctx, *, query=None):
-        player = get_player(ctx, players)
+        """Plays a song/playlist from a URL/query or resumes playback."""
+        player = get_player(ctx, ctx.bot)
         
         if query is None:
             if ctx.voice_client and ctx.voice_client.is_paused():
@@ -52,7 +54,8 @@ class MusicCommands(commands.Cog):
 
     @commands.command()
     async def stop(self, ctx):
-        player = get_player(ctx, players)
+        """Pauses the current playback."""
+        player = get_player(ctx, ctx.bot)
         if ctx.voice_client and ctx.voice_client.is_playing():
             ctx.voice_client.pause()
             player.is_paused = True
@@ -65,14 +68,16 @@ class MusicCommands(commands.Cog):
 
     @commands.command()
     async def skip(self, ctx):
-        player = get_player(ctx, players)
+        """Skips the currently playing song."""
+        player = get_player(ctx, ctx.bot)
         if ctx.voice_client and ctx.voice_client.is_playing():
             ctx.voice_client.stop()
             await ctx.send("⏭️ Saltando a la siguiente canción")
 
     @commands.command()
     async def queue(self, ctx):
-        player = get_player(ctx, players)
+        """Displays the current song queue."""
+        player = get_player(ctx, ctx.bot)
         
         logger.info(f"Queue status - current: {player.current}, queue length: {len(player.queue)}")
         
@@ -107,7 +112,8 @@ class MusicCommands(commands.Cog):
 
     @commands.command()
     async def leave(self, ctx):
-        player = get_player(ctx, players)
+        """Clears the queue and disconnects the bot from the voice channel."""
+        player = get_player(ctx, ctx.bot)
         
         if ctx.voice_client:
             player.queue.clear()
@@ -118,11 +124,13 @@ class MusicCommands(commands.Cog):
 
     @commands.command()
     async def resume(self, ctx):
+        """Resumes playback if paused. Alias for the play command without args."""
         await self.play(ctx)
 
     @commands.command()
     async def remove(self, ctx, index: int):
-        player = get_player(ctx, players)
+        """Removes a song from the queue by its 1-based index."""
+        player = get_player(ctx, ctx.bot)
         
         if not player.queue:
             await ctx.send("❌ La cola está vacía")
@@ -140,7 +148,8 @@ class MusicCommands(commands.Cog):
 
     @commands.command()
     async def next(self, ctx, index: int):
-        player = get_player(ctx, players)
+        """Moves a song from the queue to the next position by its 1-based index."""
+        player = get_player(ctx, ctx.bot)
         
         if not player.queue:
             await ctx.send("❌ La cola está vacía")
@@ -163,7 +172,8 @@ class MusicCommands(commands.Cog):
 
     @commands.command()
     async def shuffle(self, ctx):
-        player = get_player(ctx, players)
+        """Shuffles the current song queue."""
+        player = get_player(ctx, ctx.bot)
         
         if len(player.queue) < 2:
             await ctx.send("❌ No hay suficientes canciones en la cola para mezclar")
@@ -180,11 +190,12 @@ class MusicCommands(commands.Cog):
 
     @commands.command()
     async def playnow(self, ctx, *, query=None):
+        """Plays the specified song immediately, adding the current queue after it."""
         if query is None:
             await ctx.send("❌ Por favor, proporciona una canción para reproducir")
             return
         
-        player = get_player(ctx, players)
+        player = get_player(ctx, ctx.bot)
         
         try:
             if not ctx.voice_client:
@@ -217,7 +228,8 @@ class MusicCommands(commands.Cog):
 
     @commands.command()
     async def clean(self, ctx):
-        player = get_player(ctx, players)
+        """Clears the entire song queue and stops the current song."""
+        player = get_player(ctx, ctx.bot)
 
         player.queue.clear()
         
@@ -226,3 +238,25 @@ class MusicCommands(commands.Cog):
             await ctx.send("🧹 Cola limpiada y canción actual saltada")
         else:
             await ctx.send("🧹 Cola limpiada")
+
+    @commands.command(aliases=['vol'])
+    async def volume(self, ctx, level: int):
+        """Ajusta el volumen del reproductor (0-200%)."""
+        if not ctx.voice_client or not ctx.voice_client.source:
+            await ctx.send("❌ No estoy reproduciendo nada actualmente.")
+            return
+
+        if not (0 <= level <= 200):
+            await ctx.send("❌ El nivel de volumen debe estar entre 0 y 200.")
+            return
+        
+        # discord.py's volume is a float from 0.0 to 2.0 typically
+        # FFmpegPCMAudio or OpusAudio source volume
+        new_volume = level / 100.0
+        ctx.voice_client.source.volume = new_volume
+        
+        # Store volume preference in player for future songs (optional, needs MusicPlayer modification)
+        # player = get_player(ctx, ctx.bot)
+        # player.preferred_volume = new_volume 
+        
+        await ctx.send(f"🔊 Volumen ajustado al {level}%")

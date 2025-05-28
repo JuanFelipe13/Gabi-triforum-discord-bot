@@ -1,9 +1,0 @@
-Metadata-Version: 2.4
-Name: gabi-triforum
-Version: 0.1.0
-Summary: AI Voice Chatbot for Triforum
-Author: Juan Felipe Navia Rivera
-Requires-Python: >=3.9
-Dynamic: author
-Dynamic: requires-python
-Dynamic: summary

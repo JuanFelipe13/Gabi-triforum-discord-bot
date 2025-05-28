@@ -2,18 +2,21 @@ from discord.ext import commands
 import discord
 from ..core.playlist_manager import PlaylistManager
 from ..core.music_player import MusicPlayer
-from ..core.state import players
-from .utils import get_player, URL_REGEX, YTDLP_OPTIONS, handle_url
+from .utils import get_player, URL_REGEX, handle_url
+from ..core.constants import YTDLP_OPTIONS_PLAYBACK
 import yt_dlp
 import asyncio
 
 class PlaylistCommands(commands.Cog):
+    """Cog containing commands for managing user playlists."""
     def __init__(self, bot):
+        """Initializes the PlaylistCommands cog and the PlaylistManager."""
         self.bot = bot
         self.playlist_manager = PlaylistManager()
 
     @commands.command()
     async def createlist(self, ctx, name: str):
+        """Creates a new, empty playlist for the user."""
         if self.playlist_manager.create_playlist(ctx.author.id, name):
             await ctx.send(f"✅ Lista de reproducción '{name}' creada")
         else:
@@ -21,8 +24,9 @@ class PlaylistCommands(commands.Cog):
 
     @commands.command()
     async def addtolist(self, ctx, name: str, *, query):
+        """Adds a song (found via URL or search query) to a specified playlist."""
         try:
-            with yt_dlp.YoutubeDL(YTDLP_OPTIONS) as ydl:
+            with yt_dlp.YoutubeDL(YTDLP_OPTIONS_PLAYBACK) as ydl:
                 if not URL_REGEX.match(query):
                     query = f"ytsearch:{query}"
                 
@@ -48,6 +52,7 @@ class PlaylistCommands(commands.Cog):
 
     @commands.command()
     async def removefromlist(self, ctx, name: str, index: int):
+        """Removes a song from a playlist by its 1-based index."""
         if self.playlist_manager.remove_from_playlist(ctx.author.id, name, index):
             await ctx.send(f"✅ Canción {index} eliminada de '{name}'")
         else:
@@ -55,6 +60,7 @@ class PlaylistCommands(commands.Cog):
 
     @commands.command()
     async def showlist(self, ctx, name: str):
+        """Displays the contents of a specified playlist."""
         playlist = self.playlist_manager.get_playlist(ctx.author.id, name)
         
         if not playlist:
@@ -81,7 +87,8 @@ class PlaylistCommands(commands.Cog):
 
     @commands.command()
     async def playlist(self, ctx, name: str):
-        player = get_player(ctx, players)
+        """Adds all songs from a specified playlist to the music queue."""
+        player = get_player(ctx, ctx.bot)
         playlist = self.playlist_manager.get_playlist(ctx.author.id, name)
         
         if not playlist:
@@ -120,6 +127,7 @@ class PlaylistCommands(commands.Cog):
 
     @commands.command()
     async def mylists(self, ctx):
+        """Lists all playlists created by the user."""
         playlists = self.playlist_manager.get_user_playlists(ctx.author.id)
         
         if not playlists:

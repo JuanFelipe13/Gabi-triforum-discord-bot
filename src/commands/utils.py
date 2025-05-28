@@ -1,7 +1,7 @@
 from discord.ext import commands
 import discord
 import logging
-from ..core import MusicPlayer, URL_REGEX, YTDLP_OPTIONS, YTDLP_SEARCH_OPTIONS
+from ..core import MusicPlayer, URL_REGEX, YTDLP_OPTIONS_PLAYLIST_INFO, YTDLP_OPTIONS_PLAYBACK, YTDLP_SEARCH_OPTIONS
 import yt_dlp
 import asyncio
 from typing import Dict
@@ -9,13 +9,15 @@ import time
 
 logger = logging.getLogger(__name__)
 
-def get_player(ctx, players: Dict[int, MusicPlayer]) -> MusicPlayer:
+def get_player(ctx, bot) -> MusicPlayer:
+    """Gets or creates the MusicPlayer instance for the given guild."""
     guild_id = ctx.guild.id
-    if guild_id not in players:
-        players[guild_id] = MusicPlayer(ctx.bot)
-    return players[guild_id]
+    if guild_id not in bot.players:
+        bot.players[guild_id] = MusicPlayer(bot)
+    return bot.players[guild_id]
 
 async def handle_search(ctx, query: str, player):
+    """Performs a YouTube search, displays results, and handles user selection."""
     try:
         with yt_dlp.YoutubeDL(YTDLP_SEARCH_OPTIONS) as ydl:
             search_query = f"ytsearch5:{query}"
@@ -29,12 +31,13 @@ async def handle_search(ctx, query: str, player):
                 await ctx.send("❌ No se encontraron resultados")
                 return
 
+            logger.debug(f"Número de entradas de búsqueda encontradas: {len(info.get('entries', []))}")
             results = []
             for entry in list(info['entries'])[:5]:
                 if entry:
                     results.append({
                         'title': entry.get('title', 'No disponible'),
-                        'webpage_url': entry.get('url') or entry.get('webpage_url')
+                        'webpage_url': entry.get('url')
                     })
 
             if not results:
@@ -51,49 +54,77 @@ async def handle_search(ctx, query: str, player):
                 description=results_text,
                 color=discord.Color.blue()
             )
-            embed.set_footer(text="Reacciona con el número para seleccionar o ❌ para cancelar")
-            
-            message = await ctx.send(embed=embed)
-            reactions = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '❌']
-            
-            await asyncio.gather(*[message.add_reaction(reaction) for reaction in reactions])
-            
-            try:
-                def check(reaction, user):
-                    return user == ctx.author and str(reaction.emoji) in reactions
-                
-                reaction, user = await ctx.bot.wait_for(
-                    'reaction_add',
-                    timeout=30.0,
-                    check=check
-                )
-                
-                if str(reaction.emoji) == '❌':
-                    await message.delete()
+
+            view = discord.ui.View(timeout=30.0)
+            selected_url = None
+
+            async def button_callback(interaction: discord.Interaction, url: str):
+                nonlocal selected_url
+                if interaction.user != ctx.author:
+                    await interaction.response.send_message("No puedes usar esta interacción.", ephemeral=True)
                     return
+                selected_url = url
+                await interaction.response.defer() # Acknowledge interaction
+                view.stop() # Stop the view from listening to further interactions
+
+            async def cancel_callback(interaction: discord.Interaction):
+                nonlocal selected_url
+                if interaction.user != ctx.author:
+                    await interaction.response.send_message("No puedes usar esta interacción.", ephemeral=True)
+                    return
+                selected_url = "CANCEL"
+                await interaction.response.defer()
+                view.stop()
+
+            for i, result_entry in enumerate(results):
+                button = discord.ui.Button(label=f"{i+1}", style=discord.ButtonStyle.primary, custom_id=f"select_{i}")
                 
-                choice = reactions.index(str(reaction.emoji))
-                if choice < len(results):
-                    selected = results[choice]
-                    await message.delete()
-                    await handle_url(ctx, selected['webpage_url'], player)
-                
-            except asyncio.TimeoutError:
-                await message.delete()
-            finally:
+                # Need to use a wrapper or lambda with default argument to capture current result_entry['webpage_url']
+                async def make_callback(url_to_select):
+                    async def callback(interaction: discord.Interaction):
+                        await button_callback(interaction, url_to_select)
+                    return callback
+
+                button.callback = await make_callback(result_entry['webpage_url'])
+                view.add_item(button)
+            
+            cancel_button = discord.ui.Button(label="Cancelar", style=discord.ButtonStyle.danger, custom_id="cancel_search")
+            cancel_button.callback = cancel_callback
+            view.add_item(cancel_button)
+            
+            embed.set_footer(text="Selecciona una canción usando los botones o cancela.")
+            message = await ctx.send(embed=embed, view=view)
+            
+            # Wait for the view to stop (either by interaction or timeout)
+            await view.wait()
+
+            if view.is_finished() and hasattr(message, 'delete'): # Check if message exists before deleting
                 try:
-                    if not message.deleted:
-                        await message.delete()
-                except:
-                    pass
-                    
+                    await message.delete()
+                except discord.NotFound:
+                    logger.warn("Mensaje de búsqueda ya fue eliminado o no encontrado al intentar borrar.")
+                except Exception as e:
+                    logger.error(f"Error al eliminar mensaje de búsqueda: {e}")
+
+
+            if selected_url and selected_url != "CANCEL":
+                await handle_url(ctx, selected_url, player)
+            # elif selected_url == "CANCEL" or (view.is_finished() and selected_url is None): # Timeout or explicit cancel
+            #     # Message already deleted or will be by finally block if interaction happened
+            #     # If it was a timeout, selected_url is None
+            #     pass # No action needed if cancelled or timed out, message is handled
+
+            # No need for the old reaction logic or explicit finally delete for the message
+            # as the view handles timeout and button presses manage the message lifecycle or response.
+
     except Exception as e:
         logger.error(f"Error en handle_search: {e}")
         await ctx.send("❌ Error procesando la búsqueda")
 
 async def handle_url(ctx, url, player):
+    """Processes a URL (song or playlist), extracts info, and adds to the queue."""
     try:
-        with yt_dlp.YoutubeDL(YTDLP_OPTIONS) as ydl:
+        with yt_dlp.YoutubeDL(YTDLP_OPTIONS_PLAYLIST_INFO) as ydl:
             info = await asyncio.to_thread(ydl.extract_info, url, download=False)
             
             if 'entries' in info:
@@ -128,6 +159,7 @@ async def handle_url(ctx, url, player):
         await ctx.send("❌ Error procesando el URL")
 
 def get_video_duration(video_info: dict) -> int:
+    """Attempts to extract the duration (in seconds) from yt-dlp video info."""
     try:
         if isinstance(video_info, dict):
             if 'duration' in video_info:
@@ -135,7 +167,7 @@ def get_video_duration(video_info: dict) -> int:
             
             if '_type' in video_info and video_info['_type'] == 'url' and 'url' in video_info:
                 try:
-                    with yt_dlp.YoutubeDL(YTDLP_OPTIONS) as ydl:
+                    with yt_dlp.YoutubeDL(YTDLP_OPTIONS_PLAYBACK) as ydl:
                         detailed_info = ydl.extract_info(video_info['url'], download=False)
                         if detailed_info and 'duration' in detailed_info:
                             return int(float(detailed_info['duration']))
